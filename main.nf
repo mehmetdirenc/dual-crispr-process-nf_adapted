@@ -241,21 +241,23 @@ process demultiplex {
     set val(lane), file(files) from demuxFiles
 
     output:
-    set val(lane), file('*.tar') into splitFiles
+    set val(lane), file('*.demux.tar') into splitFiles
 
     script:
     """
     tar -x --use-compress-program=pigz -f ${files[1]}
-    cutadapt -j ${task.cpus} -e ${params.barcode_demux_mismatches} --no-indels -g file:${files[0]} --action=none -o "{name}_R1.fastq.gz" -p "{name}_R2.fastq.gz" ${lane}_R1.fastq.gz ${lane}_R2.fastq.gz
+    cutadapt -j ${task.cpus} -e ${params.barcode_demux_mismatches} --no-indels -g file:${files[0]} --action=none -o "{name}_R1.demux.fastq.gz" -p "{name}_R2.demux.fastq.gz" ${lane}_R1.fastq.gz ${lane}_R2.fastq.gz
 
-    for file in *.fastq.gz;
+    for file in *_R1.demux.fastq.gz;
     do
-      read_pair="\${file: -12}"
-      if [[ \${read_pair} == "_R1.fastq.gz" ]]
-      then
-        filename="\${file%_R1.fastq.gz}"
-        tar -c --use-compress-program=pigz -f \${filename}.tar \${filename}_R1.fastq.gz \${filename}_R2.fastq.gz
-      fi
+      #read_pair="\${file: -18}"
+      #if [[ \${read_pair} == "_R1.demux.fastq.gz" ]]
+      #then
+      #  filename="\${file%_R1.demux.fastq.gz}"
+      #  tar -c --use-compress-program=pigz -f \${filename}.demux.tar \${filename}_R1.demux.fastq.gz \${filename}_R2.demux.fastq.gz
+      #fi
+      filename="\${file%_R1.demux.fastq.gz}"
+      tar -c --use-compress-program=pigz -f \${filename}.demux.tar \${filename}_R1.demux.fastq.gz \${filename}_R2.demux.fastq.gz
     done
     """
 }
@@ -270,7 +272,7 @@ def ungroupTuple = {
 splitFiles
     .flatMap { it -> ungroupTuple(it) }
     .filter { it[1].baseName =~ /^(?!.*unknown).*$/ }
-    .map { lane, file -> tuple(lane, file.name.replaceAll(/\.tar/, ''), file) }
+    .map { lane, file -> tuple(lane, file.name.replaceAll(/\.demux\.tar/, ''), file) }
     .into { flattenedSplitFiles; fastqcSplitFiles }
 
 process trim_barcode_and_spacer {
@@ -285,7 +287,7 @@ process trim_barcode_and_spacer {
     set val(lane), val(id), file(files) from flattenedSplitFiles
 
     output:
-    set val(lane), val(id), file("${id}.tar") into spacerTrimmedFiles
+    set val(lane), val(id), file("${id}.trimmed.tar") into spacerTrimmedFiles
 
     script:
     barcode_spacer_length_R1 = params.spacer_length_R1 + params.barcode_length
@@ -299,18 +301,18 @@ process trim_barcode_and_spacer {
     remove_beginning_R1=\$(expr \${stagger_length} + ${barcode_spacer_length_R1})
     remove_beginning_R2=\$(expr \${stagger_length} + ${barcode_spacer_length_R2})
 
-    cutadapt ${id}_R1.fastq.gz -j ${task.cpus} -u \${remove_beginning_R1} -o ${id}_R1_remove_beginning.fastq.gz
-    cutadapt ${id}_R1_remove_beginning.fastq.gz -j ${task.cpus} -l ${params.guide_length} -o ${id}_R1.fastq.gz
+    cutadapt ${id}_R1.demux.fastq.gz -j ${task.cpus} -u \${remove_beginning_R1} -o ${id}_R1_remove_beginning.fastq.gz
+    cutadapt ${id}_R1_remove_beginning.fastq.gz -j ${task.cpus} -l ${params.guide_length} -o ${id}_R1.trimmed.fastq.gz
     rm ${id}_R1_remove_beginning.fastq.gz
-    fastqc -q ${id}_R1.fastq.gz
+    fastqc -q ${id}_R1.trimmed.fastq.gz
 
 
-    cutadapt ${id}_R2.fastq.gz -j ${task.cpus} -u \${remove_beginning_R2} -o ${id}_R2_remove_beginning.fastq.gz
-    cutadapt ${id}_R2_remove_beginning.fastq.gz -j ${task.cpus} -l ${params.guide_length} -o ${id}_R2.fastq.gz
+    cutadapt ${id}_R2.demux.fastq.gz -j ${task.cpus} -u \${remove_beginning_R2} -o ${id}_R2_remove_beginning.fastq.gz
+    cutadapt ${id}_R2_remove_beginning.fastq.gz -j ${task.cpus} -l ${params.guide_length} -o ${id}_R2.trimmed.fastq.gz
     rm ${id}_R2_remove_beginning.fastq.gz
-    fastqc -q ${id}_R2.fastq.gz
+    fastqc -q ${id}_R2.trimmed.fastq.gz
 
-    tar -c --use-compress-program=pigz -f ${id}.tar ${id}_R1.fastq.gz ${id}_R2.fastq.gz
+    tar -c --use-compress-program=pigz -f ${id}.trimmed.tar ${id}_R1.trimmed* ${id}_R2.trimmed*
     """
 }
 
@@ -373,8 +375,8 @@ process align {
         --fr \
         --score-min 'C,0,-1' \
         -N 1 \
-        -1 ${id}_R1.fastq.gz \
-        -2 ${id}_R2.fastq.gz 2> ${id}.log > ${id}.sam
+        -1 ${id}_R1.trimmed.fastq.gz \
+        -2 ${id}_R2.trimmed.fastq.gz 2> ${id}.log > ${id}.sam
     """
 }
 
