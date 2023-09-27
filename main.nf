@@ -407,6 +407,7 @@ process count {
         -T ${task.cpus} \
         -a ${saf} \
         -p \
+        --countReadPairs \
         -B \
         -C \
         -F SAF \
