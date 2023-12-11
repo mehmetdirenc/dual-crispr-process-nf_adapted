@@ -3,7 +3,7 @@
 def helpMessage() {
     log.info"""
     ================================================================
-     crispr-process-nf
+     dual-crispr-process-nf
     ================================================================
      DESCRIPTION
 
@@ -13,56 +13,64 @@ def helpMessage() {
      nextflow run zuberlab/crispr-process-nf
 
      Options:
-        --inputDir                  Input directory containing raw files.
-                                    (default: '01_raw')
+        --inputDir                          Input directory containing raw files.
+                                            (default: '01_raw')
 
-        --outputDir                 Output directory for processed files.
-                                    (default: '02_processed')
+        --outputDir                         Output directory for processed files.
+                                            (default: '02_processed')
 
-        --library                   Path to sgRNA / shRNA library file.
-                                    (default: 'library.txt')
-                                    The following columns are required:
-                                        - id:       unique name of sgRNA / shRNA
-                                        - gene:     gene targeted by sgRNA / shRNA
-                                        - sequence: nucleotide sequence of sgRNA / shRNA
+        --library                           Path to sgRNA / shRNA library file.
+                                            (default: 'library.txt')
+                                            The following columns are required:
+                                                - id:       unique name of sgRNA / shRNA
+                                                - gene:     gene targeted by sgRNA / shRNA
+                                                - sequence: nucleotide sequence of sgRNA / shRNA
 
-         --barcodes                 Path to file containing barcodes for demultiplexing.
-                                    (default: 'barcodes.fasta')
-                                    The following columns are required:
-                                        - lane:         name of BAM / FASTQ input file
-                                        - sample_name:  name of demultiplexed sample followed by an integer number (1-4)
-                                                        corresponding to the length of the stagger sequence used for this sample,
-                                                        seperated by the keyword STAGGERLENGTH (e.g. STAGGERLENGTH1, STAGGERLENGTH2, ...)
-                                        - barcode:      8 nucleotide long sequence of the stagger, followed by the sample barcode,
-                                                        filled up to a length of 8 nucleotides with the subsequent sequence of the spacer
+         --barcodes                         Path to file containing barcodes for demultiplexing.
+                                            (default: 'barcodes.fasta')
+                                            The following columns are required:
+                                                - lane:         name of BAM / FASTQ input file
+                                                - sample_name:  name of demultiplexed sample followed by an integer number (1-4)
+                                                                corresponding to the length of the stagger sequence used for this sample,
+                                                                seperated by the keyword STAGGERLENGTH (e.g. STAGGERLENGTH1, STAGGERLENGTH2, ...)
+                                                - barcode:      8 nucleotide long sequence of the stagger, followed by the sample barcode,
+                                                                filled up to a length of 8 nucleotides with the subsequent sequence of the spacer
 
-        --reverse_complement        Should reads be converted to reverse_complement
-                                    before trimming (default: false)
+        --reverse_complement                Should reads be converted to reverse_complement
+                                            before trimming (default: false)
 
-        --barcode_random_length     Number of nucleotides in random barcode
-                                    (default for sgRNA: 4)
+        --barcode_random_length             Number of nucleotides in random barcode
+                                            (default for sgRNA: 4)
 
-        --barcode_demux_mismatches  Number of mismatches allowed during demultiplexing
-                                    of barcode. (default: 1)
+        --barcode_demux_mismatches          Number of mismatches allowed during demultiplexing
+                                            of barcode. (default: 1)
 
-        --barcode_length            Number of nucleotides in sample barcode.
-                                    (default: 4)
+        --barcode_length                    Number of nucleotides in sample barcode.
+                                            (default: 4)
 
-        --spacer_length_R1          Number of nucleotides in spacer sequence between
-                                    barcodes and sgRNA / shRNA sequence. (default: 26)
+        --spacer_length_R1                  Number of nucleotides in spacer sequence between
+                                            barcodes and sgRNA / shRNA sequence. (default: 26)
 
-        --spacer_length_R2          Number of nucleotides in spacer sequence between
-                                    barcodes and sgRNA / shRNA sequence. (default: 33)
+        --spacer_length_R2                  Number of nucleotides in spacer sequence between
+                                            barcodes and sgRNA / shRNA sequence. (default: 33)
 
-        --guide_length              Number of nucleotides in guide sequence. (default: 21)
+        --guide_length                      Number of nucleotides in guide sequence. (default: 21)
 
-        --padding_bases_first_guide Nucleotides used for 5' padding if sgRNA / shRNA are of
-                                    unequal length. Must be one of G, C, T, and A.
-                                    (default: ACC)
+        --padding_bases_first_guide         Nucleotides used for padding if first sgRNA / shRNA are of
+                                            unequal length. Must be one of G, C, T, and A.
+                                            (default: ACC)
 
-        --padding_bases_matching_guide  Nucleotides used for 3' padding if sgRNA / shRNA are of
-                                        unequal length. Must be one of G, C, T, and A.
-                                        (default: GGT)
+        --padding_bases_matching_guide      Nucleotides used for padding if matching sgRNA / shRNA are of
+                                            unequal length. Must be one of G, C, T, and A.
+                                            (default: GGT)
+
+        --forward_read_length               Read length of the forward read, neccessary to determine post guide sequence (default: 65)
+
+        --post_guide_sequence_nonEmpty      Sequence compositions downstream of guide sequence for non-empty library (default: 'GTTTAAGAGCTATGCTGGAAACAGCATAGCAAGTTTAAATA')
+
+        --post_guide_sequence_Empty         Sequence compositions downstream of guide sequence for empty library (default: 'GTTTGAGTCTTCGGTTTAAACGCGGCCGCGGATCCGAAGAC')
+
+        --post_guide_sequence_Empty_Empty   Sequence compositions downstream of guide sequence for empty-empty library (default:'GACGATCTCAAGTCAAGC')
 
      Profiles:
         standard                    local execution
@@ -90,20 +98,20 @@ if (params.help) {
 
 log.info ""
 log.info " parameters "
-log.info " ======================"
-log.info " input directory          : ${params.inputDir}"
-log.info " output directory         : ${params.outputDir}"
-log.info " library file             : ${params.library}"
-log.info " barcode file             : ${params.barcodes}"
-log.info " barcode random (nt)      : ${params.barcode_random_length}"
-log.info " barcode demultiplex (nt) : ${params.barcode_length}"
-log.info " spacer R1 (nt)           : ${params.spacer_length_R1}"
-log.info " spacer R2 (nt)           : ${params.spacer_length_R2}"
-log.info " demultiplex mismatches   : ${params.barcode_demux_mismatches}"
-log.info " 5' guide padding base    : ${params.padding_bases_first_guide}"
-log.info " 3' guide padding base    : ${params.padding_bases_matching_guide}"
-log.info " reverse complement       : ${params.reverse_complement}"
-log.info " ======================"
+log.info " =============================="
+log.info " input directory              : ${params.inputDir}"
+log.info " output directory             : ${params.outputDir}"
+log.info " library file                 : ${params.library}"
+log.info " barcode file                 : ${params.barcodes}"
+log.info " barcode random (nt)          : ${params.barcode_random_length}"
+log.info " barcode demultiplex (nt)     : ${params.barcode_length}"
+log.info " spacer R1 (nt)               : ${params.spacer_length_R1}"
+log.info " spacer R2 (nt)               : ${params.spacer_length_R2}"
+log.info " demultiplex mismatches       : ${params.barcode_demux_mismatches}"
+log.info " first guide padding base     : ${params.padding_bases_first_guide}"
+log.info " matchnig guide padding base  : ${params.padding_bases_matching_guide}"
+log.info " reverse complement           : ${params.reverse_complement}"
+log.info " =============================="
 log.info ""
 
 Channel
@@ -241,7 +249,7 @@ process demultiplex {
     set val(lane), file(files) from demuxFiles
 
     output:
-    set val(lane), file('*.demux.tar') into splitFiles
+    set val(lane), file('*.demux.tar') into splitFiles, splitFilesFastQC
 
     script:
     """
@@ -267,13 +275,18 @@ def ungroupTuple = {
     def name = it[0]
     it[1].each { result << [name, it] }
     return result
- }
+}
+
+splitFilesFastQC
+    .flatMap { it -> ungroupTuple(it) }
+    .map { lane, file -> tuple(lane, file.name.replaceAll(/\.demux\.tar/, ''), file) }
+    .set { fastqcSplitFiles }
 
 splitFiles
     .flatMap { it -> ungroupTuple(it) }
     .filter { it[1].baseName =~ /^(?!.*unknown).*$/ }
     .map { lane, file -> tuple(lane, file.name.replaceAll(/\.demux\.tar/, ''), file) }
-    .into { flattenedSplitFiles; fastqcSplitFiles }
+    .set { flattenedSplitFiles }
 
 process trim_barcode_and_spacer {
 
@@ -288,6 +301,7 @@ process trim_barcode_and_spacer {
 
     output:
     set val(lane), val(id), file("${id}.trimmed.tar") into spacerTrimmedFiles
+    file "${id}*_trimmed_beginning*" into emptyStats
 
     script:
     barcode_spacer_length_R1 = params.spacer_length_R1 + params.barcode_length
@@ -297,22 +311,90 @@ process trim_barcode_and_spacer {
     tar -x --use-compress-program=pigz -f ${files}
 
     str=${id}
-    stagger_length="\${str: -1}"
+    stagger_length=\${str: -1}
     remove_beginning_R1=\$(expr \${stagger_length} + ${barcode_spacer_length_R1})
     remove_beginning_R2=\$(expr \${stagger_length} + ${barcode_spacer_length_R2})
 
-    cutadapt ${id}_R1.demux.fastq.gz -j ${task.cpus} -u \${remove_beginning_R1} -o ${id}_R1_remove_beginning.fastq.gz
-    cutadapt ${id}_R1_remove_beginning.fastq.gz -j ${task.cpus} -l ${params.guide_length} -o ${id}_R1.trimmed.fastq.gz
-    rm ${id}_R1_remove_beginning.fastq.gz
-    fastqc -q ${id}_R1.trimmed.fastq.gz
+    post_guide_sequence_nonEmpty="${params.post_guide_sequence_nonEmpty}"
+    post_guide_sequence_Empty="${params.post_guide_sequence_Empty}"
+    post_guide_sequence_Empty_Empty="${params.post_guide_sequence_Empty_Empty}"
+    
+    post_guide_sequence_length_18mer=\$(expr ${params.forward_read_length} - ${params.barcode_random_length} - \${remove_beginning_R1} - 18)
+    post_guide_sequence_length_19mer=\$(expr ${params.forward_read_length} - ${params.barcode_random_length} - \${remove_beginning_R1} - 19)
+    post_guide_sequence_length_20mer=\$(expr ${params.forward_read_length} - ${params.barcode_random_length} - \${remove_beginning_R1} - 20)
+    post_guide_sequence_length_21mer=\$(expr ${params.forward_read_length} - ${params.barcode_random_length} - \${remove_beginning_R1} - 21)
 
+    post_guide_sequence_nonEmpty_18mer="^GNNNNNNNNNNNNNNNNN\${post_guide_sequence_nonEmpty:0:post_guide_sequence_length_18mer}"
+    post_guide_sequence_Empty_18mer="^GNNNNNNNNNNNNNNNNN\${post_guide_sequence_Empty:0:post_guide_sequence_length_18mer}"
+    post_guide_sequence_nonEmpty_19mer="^GNNNNNNNNNNNNNNNNNN\${post_guide_sequence_nonEmpty:0:post_guide_sequence_length_19mer}"
+    post_guide_sequence_Empty_19mer="^GNNNNNNNNNNNNNNNNNN\${post_guide_sequence_Empty:0:post_guide_sequence_length_19mer}"
+    post_guide_sequence_nonEmpty_20mer="^GNNNNNNNNNNNNNNNNNNN\${post_guide_sequence_nonEmpty:0:post_guide_sequence_length_20mer}"
+    post_guide_sequence_Empty_20mer="^GNNNNNNNNNNNNNNNNNNN\${post_guide_sequence_Empty:0:post_guide_sequence_length_20mer}"
+    post_guide_sequence_nonEmpty_21mer="^GNNNNNNNNNNNNNNNNNNNN\${post_guide_sequence_nonEmpty:0:post_guide_sequence_length_21mer}"
+    post_guide_sequence_Empty_21mer="^GNNNNNNNNNNNNNNNNNNNN\${post_guide_sequence_Empty:0:post_guide_sequence_length_21mer}"
+    post_guide_sequence_Empty_Empty="^\${post_guide_sequence_Empty_Empty}"
 
-    cutadapt ${id}_R2.demux.fastq.gz -j ${task.cpus} -u \${remove_beginning_R2} -o ${id}_R2_remove_beginning.fastq.gz
-    cutadapt ${id}_R2_remove_beginning.fastq.gz -j ${task.cpus} -l ${params.guide_length} -o ${id}_R2.trimmed.fastq.gz
-    rm ${id}_R2_remove_beginning.fastq.gz
-    fastqc -q ${id}_R2.trimmed.fastq.gz
+    err_20mer=1
+    err_21mer=1
+
+    if [[ \${stagger_length} -eq 3 ]]
+    then
+        err_21mer=0
+    fi
+
+    if [[ \${stagger_length} -eq 4 ]]
+    then
+        err_20mer=0
+        err_21mer=0
+    fi
+
+    cutadapt ${id}_R1.demux.fastq.gz -j ${task.cpus} -u \${remove_beginning_R1} -o ${id}_R1_trimmed_beginning.fastq.gz
+    cutadapt ${id}_R2.demux.fastq.gz -j ${task.cpus} -u \${remove_beginning_R2} -o ${id}_R2_trimmed_beginning.fastq.gz
+
+    cutadapt -j ${task.cpus} --no-indels --action=none \
+        -g "nonEmpty_18mer=\${post_guide_sequence_nonEmpty_18mer};e=1" -g "Empty_18mer=\${post_guide_sequence_Empty_18mer};e=1" \
+        -g "nonEmpty_19mer=\${post_guide_sequence_nonEmpty_19mer};e=1" -g "Empty_19mer=\${post_guide_sequence_Empty_19mer};e=1" \
+        -g "nonEmpty_20mer=\${post_guide_sequence_nonEmpty_20mer};e=\${err_20mer}" -g "Empty_20mer=\${post_guide_sequence_Empty_20mer};e=\${err_20mer}" \
+        -g "nonEmpty_21mer=\${post_guide_sequence_nonEmpty_21mer};e=\${err_21mer}" -g "Empty_21mer=\${post_guide_sequence_Empty_21mer};e=\${err_21mer}" \
+        -g "Empty_Empty=\${post_guide_sequence_Empty_Empty};e=1" \
+        -o "${id}_R1_{name}_trimmed_beginning.fastq.gz" -p "${id}_R2_{name}_trimmed_beginning.fastq.gz" \
+        ${id}_R1_trimmed_beginning.fastq.gz ${id}_R2_trimmed_beginning.fastq.gz
+
+    cat ${id}_R1_nonEmpty_18mer_trimmed_beginning.fastq.gz ${id}_R1_nonEmpty_19mer_trimmed_beginning.fastq.gz ${id}_R1_nonEmpty_20mer_trimmed_beginning.fastq.gz ${id}_R1_nonEmpty_21mer_trimmed_beginning.fastq.gz > ${id}_R1_nonEmpty_trimmed_beginning.fastq.gz
+    cat ${id}_R2_nonEmpty_18mer_trimmed_beginning.fastq.gz ${id}_R2_nonEmpty_19mer_trimmed_beginning.fastq.gz ${id}_R2_nonEmpty_20mer_trimmed_beginning.fastq.gz ${id}_R1_nonEmpty_21mer_trimmed_beginning.fastq.gz > ${id}_R2_nonEmpty_trimmed_beginning.fastq.gz
+
+    cutadapt ${id}_R1_nonEmpty_trimmed_beginning.fastq.gz -j ${task.cpus} -l ${params.guide_length} -o ${id}_R1.trimmed.fastq.gz
+    rm ${id}_R1_trimmed_beginning.fastq.gz
+
+    
+    cutadapt ${id}_R2_nonEmpty_trimmed_beginning.fastq.gz -j ${task.cpus} -l ${params.guide_length} -o ${id}_R2.trimmed.fastq.gz
+    rm ${id}_R2_trimmed_beginning.fastq.gz
+
+    fastqc -t ${task.cpus} -q ${id}*trimmed*.fastq.gz
 
     tar -c --use-compress-program=pigz -f ${id}.trimmed.tar ${id}_R1.trimmed* ${id}_R2.trimmed*
+    """
+}
+
+process multiqc_read_details {
+
+    tag { 'all' }
+
+    publishDir path: "${params.outputDir}/fastq/",
+               mode: 'copy',
+               overwrite: 'true'
+
+    input:
+    file (featurecounts: 'emptyStats/*') from emptyStats.collect()
+
+    output:
+    file "*multiqc_report.html" into multiqc_report_read_details
+
+    script:
+    """
+    export LC_ALL=C.UTF-8
+    export LANG=C.UTF-8
+    multiqc --interactive -f -x *.run .
     """
 }
 
@@ -361,6 +443,8 @@ process align {
     output:
     set val(lane), val(id), file("${id}.sam") into alignedFiles
     file "${id}.log" into alignResults
+    file "${id}.sam.stats" into alignStats
+    file "${id}.sam.flagstat" into alignFlagstats
 
     script:
     """
@@ -369,14 +453,23 @@ process align {
     bowtie2 \
         --threads \$((${task.cpus})) \
         -x ${index}/index \
+        --ignore-quals \
         -L 21 \
-        -I 40 \
-        -X 50 \
-        --fr \
-        --score-min 'C,0,-1' \
         -N 1 \
+        --very-sensitive \
+        --score-min L,-36,0 \
+        --np 25 \
+        --rdg 25,25 \
+        --rfg 25,25 \
+        --no-overlap \
+        --no-contain \
+        --fr \
         -1 ${id}_R1.trimmed.fastq.gz \
         -2 ${id}_R2.trimmed.fastq.gz 2> ${id}.log > ${id}.sam
+
+    samtools stats ${id}.sam > ${id}.sam.stats
+    samtools flagstats ${id}.sam > ${id}.sam.flagstat
+
     """
 }
 
@@ -475,6 +568,8 @@ process multiqc {
     input:
     file (fastqc: 'fastqc/*') from fastqcResults.collect()
     file (align: 'align/*') from alignResults.collect()
+    file (alignStats: 'align/*') from alignStats.collect()
+    file (alignFlagstats: 'align/*') from alignFlagstats.collect()
     file (featurecounts: 'featureCounts/*') from featureCountsResults.collect()
 
     output:
@@ -484,7 +579,7 @@ process multiqc {
     """
     export LC_ALL=C.UTF-8
     export LANG=C.UTF-8
-    multiqc -f -x *.run .
+    multiqc --interactive -f -x *.run .
     """
 }
 
