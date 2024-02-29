@@ -42,7 +42,8 @@ counts <- lapply(count_files, read_featurecounts) %>%
   tidyr::spread(sample_name, count) %>%
   dplyr::inner_join(library, by = "id") %>%
   dplyr::select(id, group, dplyr::everything())
-  
-counts[rowMeans(as.matrix(counts[,3:ncol(counts)]))>5,] %>%
+
+# counts[rowMeans(as.matrix(counts[,3:ncol(counts)]))>5,]
+counts %>%
   readr::format_tsv() %>%
   cat

@@ -16,7 +16,6 @@
 
 ### command line parameters
 args         <- commandArgs(trailingOnly = TRUE)
-# setwd("/Volumes/groups/zuber/USERS/florian.andersch/data/workspace/data/crispr/zuber_dualhuman_genomewide_facs_robert/manual_process/mapping/")
 input_file   <- args[1]
 padding_bases_first_guide <- args[2]
 padding_bases_matching_guide <- args[3]

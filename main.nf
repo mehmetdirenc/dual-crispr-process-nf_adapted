@@ -45,6 +45,9 @@ def helpMessage() {
         --barcode_demux_mismatches          Number of mismatches allowed during demultiplexing
                                             of barcode. (default: 1)
 
+        --barcode_demux_location            Read location of the sample barcode. Only the specified read is used for demultiplexing.
+                                            Either 'forward' or 'reverse' (default: 'forward')
+
         --barcode_length                    Number of nucleotides in sample barcode.
                                             (default: 4)
 
@@ -84,8 +87,9 @@ def helpMessage() {
      zuberlab/crispr-nf:latest
 
      Author:
-     Jesse J. Lipp (jesse.lipp@imp.ac.at)
      Florian Andersch (florian.andersch@imp.ac.at)
+     
+     
     """.stripIndent()
 }
 
@@ -98,19 +102,25 @@ if (params.help) {
 
 log.info ""
 log.info " parameters "
-log.info " =============================="
-log.info " input directory              : ${params.inputDir}"
-log.info " output directory             : ${params.outputDir}"
-log.info " library file                 : ${params.library}"
-log.info " barcode file                 : ${params.barcodes}"
-log.info " barcode random (nt)          : ${params.barcode_random_length}"
-log.info " barcode demultiplex (nt)     : ${params.barcode_length}"
-log.info " spacer R1 (nt)               : ${params.spacer_length_R1}"
-log.info " spacer R2 (nt)               : ${params.spacer_length_R2}"
-log.info " demultiplex mismatches       : ${params.barcode_demux_mismatches}"
-log.info " first guide padding base     : ${params.padding_bases_first_guide}"
-log.info " matchnig guide padding base  : ${params.padding_bases_matching_guide}"
-log.info " reverse complement           : ${params.reverse_complement}"
+log.info " =================================="
+log.info " input directory                  : ${params.inputDir}"
+log.info " output directory                 : ${params.outputDir}"
+log.info " library file                     : ${params.library}"
+log.info " barcode file                     : ${params.barcodes}"
+log.info " barcode random (nt)              : ${params.barcode_random_length}"
+log.info " barcode demultiplex (nt)         : ${params.barcode_length}"
+log.info " spacer R1 (nt)                   : ${params.spacer_length_R1}"
+log.info " spacer R2 (nt)                   : ${params.spacer_length_R2}"
+log.info " demultiplex mismatches           : ${params.barcode_demux_mismatches}"
+log.info " sample barcode location          : ${params.barcode_demux_location}"
+log.info " first guide padding base         : ${params.padding_bases_first_guide}"
+log.info " matchnig guide padding base      : ${params.padding_bases_matching_guide}"
+log.info " reverse complement               : ${params.reverse_complement}"
+log.info " post guide sequnce non-empty     : ${params.post_guide_sequence_nonEmpty}"
+log.info " post guide sequnce empty         : ${params.post_guide_sequence_Empty}"
+log.info " post guide sequnce empty-empty   : ${params.post_guide_sequence_Empty_Empty}"
+log.info " forward read length              : ${params.forward_read_length}"
+
 log.info " =============================="
 log.info ""
 
@@ -254,16 +264,20 @@ process demultiplex {
     script:
     """
     tar -x --use-compress-program=pigz -f ${files[1]}
-    cutadapt -j ${task.cpus} -e ${params.barcode_demux_mismatches} --no-indels -g file:${files[0]} --action=none -o "{name}_R1.demux.fastq.gz" -p "{name}_R2.demux.fastq.gz" ${lane}_R1.fastq.gz ${lane}_R2.fastq.gz
+
+    if [[ ${params.barcode_demux_location} == 'forward' ]]
+    then
+        cutadapt -j ${task.cpus} -e ${params.barcode_demux_mismatches} --no-indels -g file:${files[0]} --action=none -o "{name}_R1.demux.fastq.gz" -p "{name}_R2.demux.fastq.gz" ${lane}_R1.fastq.gz ${lane}_R2.fastq.gz
+    elif [[ ${params.barcode_demux_location} == 'reverse' ]]
+    then
+        cutadapt -j ${task.cpus} -e ${params.barcode_demux_mismatches} --no-indels -g file:${files[0]} --action=none -o "{name}_R2.demux.fastq.gz" -p "{name}_R1.demux.fastq.gz" ${lane}_R2.fastq.gz ${lane}_R1.fastq.gz
+    else
+        echo ${params.barcode_demux_location} not a valid option for the parameter barcode_demux_location.
+        exit
+    fi
 
     for file in *_R1.demux.fastq.gz;
     do
-      #read_pair="\${file: -18}"
-      #if [[ \${read_pair} == "_R1.demux.fastq.gz" ]]
-      #then
-      #  filename="\${file%_R1.demux.fastq.gz}"
-      #  tar -c --use-compress-program=pigz -f \${filename}.demux.tar \${filename}_R1.demux.fastq.gz \${filename}_R2.demux.fastq.gz
-      #fi
       filename="\${file%_R1.demux.fastq.gz}"
       tar -c --use-compress-program=pigz -f \${filename}.demux.tar \${filename}_R1.demux.fastq.gz \${filename}_R2.demux.fastq.gz
     done
@@ -301,7 +315,8 @@ process trim_barcode_and_spacer {
 
     output:
     set val(lane), val(id), file("${id}.trimmed.tar") into spacerTrimmedFiles
-    file "${id}*_trimmed_beginning*" into emptyStats
+    file "${id}*_trimmed_beginning*" into emptyStatsUnmerged
+    file "${id}*Empty_trimmed_beginning*" into emptyStatsMerged
 
     script:
     barcode_spacer_length_R1 = params.spacer_length_R1 + params.barcode_length
@@ -363,6 +378,9 @@ process trim_barcode_and_spacer {
     cat ${id}_R1_nonEmpty_18mer_trimmed_beginning.fastq.gz ${id}_R1_nonEmpty_19mer_trimmed_beginning.fastq.gz ${id}_R1_nonEmpty_20mer_trimmed_beginning.fastq.gz ${id}_R1_nonEmpty_21mer_trimmed_beginning.fastq.gz > ${id}_R1_nonEmpty_trimmed_beginning.fastq.gz
     cat ${id}_R2_nonEmpty_18mer_trimmed_beginning.fastq.gz ${id}_R2_nonEmpty_19mer_trimmed_beginning.fastq.gz ${id}_R2_nonEmpty_20mer_trimmed_beginning.fastq.gz ${id}_R1_nonEmpty_21mer_trimmed_beginning.fastq.gz > ${id}_R2_nonEmpty_trimmed_beginning.fastq.gz
 
+    cat ${id}_R1_Empty_18mer_trimmed_beginning.fastq.gz ${id}_R1_Empty_19mer_trimmed_beginning.fastq.gz ${id}_R1_Empty_20mer_trimmed_beginning.fastq.gz ${id}_R1_Empty_21mer_trimmed_beginning.fastq.gz > ${id}_R1_Empty_trimmed_beginning.fastq.gz
+    cat ${id}_R2_Empty_18mer_trimmed_beginning.fastq.gz ${id}_R2_Empty_19mer_trimmed_beginning.fastq.gz ${id}_R2_Empty_20mer_trimmed_beginning.fastq.gz ${id}_R1_Empty_21mer_trimmed_beginning.fastq.gz > ${id}_R2_Empty_trimmed_beginning.fastq.gz
+
     cutadapt ${id}_R1_nonEmpty_trimmed_beginning.fastq.gz -j ${task.cpus} -l ${params.guide_length} -o ${id}_R1.trimmed.fastq.gz
     rm ${id}_R1_trimmed_beginning.fastq.gz
 
@@ -385,7 +403,7 @@ process multiqc_read_details {
                overwrite: 'true'
 
     input:
-    file (featurecounts: 'emptyStats/*') from emptyStats.collect()
+    file (emptyStatsUnmerged: 'emptyStatsUnmerged/*') from emptyStatsUnmerged.collect()
 
     output:
     file "*multiqc_report.html" into multiqc_report_read_details
@@ -566,7 +584,8 @@ process multiqc {
                overwrite: 'true'
 
     input:
-    file (fastqc: 'fastqc/*') from fastqcResults.collect()
+    file (fastqc_demux: 'fastqc_demux/*') from fastqcResults.collect()
+    file (fastqc_emptyStatsMerged: 'fastqc_emptyStatsMerged/*') from emptyStatsMerged.collect()
     file (align: 'align/*') from alignResults.collect()
     file (alignStats: 'align/*') from alignStats.collect()
     file (alignFlagstats: 'align/*') from alignFlagstats.collect()
