@@ -61,11 +61,11 @@ def helpMessage() {
 
         --padding_bases_first_guide         Nucleotides used for padding if first sgRNA / shRNA are of
                                             unequal length. Must be one of G, C, T, and A.
-                                            (default: ACC)
+                                            (default: GTT)
 
         --padding_bases_matching_guide      Nucleotides used for padding if matching sgRNA / shRNA are of
                                             unequal length. Must be one of G, C, T, and A.
-                                            (default: GGT)
+                                            (default: ACC)
 
         --forward_read_length               Read length of the forward read, neccessary to determine post guide sequence (default: 65)
 
@@ -114,7 +114,7 @@ log.info " spacer R2 (nt)                   : ${params.spacer_length_R2}"
 log.info " demultiplex mismatches           : ${params.barcode_demux_mismatches}"
 log.info " sample barcode location          : ${params.barcode_demux_location}"
 log.info " first guide padding base         : ${params.padding_bases_first_guide}"
-log.info " matchnig guide padding base      : ${params.padding_bases_matching_guide}"
+log.info " matching guide padding base      : ${params.padding_bases_matching_guide}"
 log.info " reverse complement               : ${params.reverse_complement}"
 log.info " post guide sequnce non-empty     : ${params.post_guide_sequence_nonEmpty}"
 log.info " post guide sequnce empty         : ${params.post_guide_sequence_Empty}"
@@ -275,6 +275,9 @@ process demultiplex {
         echo ${params.barcode_demux_location} not a valid option for the parameter barcode_demux_location.
         exit
     fi
+
+    mv unknown_R1.demux.fastq.gz ${lane}_unknown_R1.demux.fastq.gz
+    mv unknown_R2.demux.fastq.gz ${lane}_unknown_R2.demux.fastq.gz
 
     for file in *_R1.demux.fastq.gz;
     do
