@@ -48,6 +48,8 @@ def helpMessage() {
         --barcode_demux_location            Read location of the sample barcode. Only the specified read is used for demultiplexing.
                                             Either 'forward' or 'reverse' (default: 'forward')
 
+        --fixed_stagger_forward             Set if stagger length on forward read is constant, e.g. when barcode_demux_location is set to reverse. (default: 0)
+
         --barcode_length                    Number of nucleotides in sample barcode.
                                             (default: 4)
 
@@ -68,6 +70,8 @@ def helpMessage() {
                                             (default: ACC)
 
         --forward_read_length               Read length of the forward read, neccessary to determine post guide sequence (default: 65)
+
+        --library_composition_details       Should reads be processed to get library composition details (e.g. empty/non-empty 18/19/20/21mer stats) (default: false)
 
         --post_guide_sequence_nonEmpty      Sequence compositions downstream of guide sequence for non-empty library (default: 'GTTTAAGAGCTATGCTGGAAACAGCATAGCAAGTTTAAATA')
 
@@ -113,9 +117,11 @@ log.info " spacer R1 (nt)                   : ${params.spacer_length_R1}"
 log.info " spacer R2 (nt)                   : ${params.spacer_length_R2}"
 log.info " demultiplex mismatches           : ${params.barcode_demux_mismatches}"
 log.info " sample barcode location          : ${params.barcode_demux_location}"
+log.info " fixed stagger on forward read    : ${params.fixed_stagger_forward}"
 log.info " first guide padding base         : ${params.padding_bases_first_guide}"
 log.info " matching guide padding base      : ${params.padding_bases_matching_guide}"
 log.info " reverse complement               : ${params.reverse_complement}"
+log.info " library composition details      : ${params.library_composition_details}"
 log.info " post guide sequnce non-empty     : ${params.post_guide_sequence_nonEmpty}"
 log.info " post guide sequnce empty         : ${params.post_guide_sequence_Empty}"
 log.info " post guide sequnce empty-empty   : ${params.post_guide_sequence_Empty_Empty}"
@@ -333,65 +339,87 @@ process trim_barcode_and_spacer {
     remove_beginning_R1=\$(expr \${stagger_length} + ${barcode_spacer_length_R1})
     remove_beginning_R2=\$(expr \${stagger_length} + ${barcode_spacer_length_R2})
 
-    post_guide_sequence_nonEmpty="${params.post_guide_sequence_nonEmpty}"
-    post_guide_sequence_Empty="${params.post_guide_sequence_Empty}"
-    post_guide_sequence_Empty_Empty="${params.post_guide_sequence_Empty_Empty}"
-    
-    post_guide_sequence_length_18mer=\$(expr ${params.forward_read_length} - ${params.barcode_random_length} - \${remove_beginning_R1} - 18)
-    post_guide_sequence_length_19mer=\$(expr ${params.forward_read_length} - ${params.barcode_random_length} - \${remove_beginning_R1} - 19)
-    post_guide_sequence_length_20mer=\$(expr ${params.forward_read_length} - ${params.barcode_random_length} - \${remove_beginning_R1} - 20)
-    post_guide_sequence_length_21mer=\$(expr ${params.forward_read_length} - ${params.barcode_random_length} - \${remove_beginning_R1} - 21)
-
-    post_guide_sequence_nonEmpty_18mer="^GNNNNNNNNNNNNNNNNN\${post_guide_sequence_nonEmpty:0:post_guide_sequence_length_18mer}"
-    post_guide_sequence_Empty_18mer="^GNNNNNNNNNNNNNNNNN\${post_guide_sequence_Empty:0:post_guide_sequence_length_18mer}"
-    post_guide_sequence_nonEmpty_19mer="^GNNNNNNNNNNNNNNNNNN\${post_guide_sequence_nonEmpty:0:post_guide_sequence_length_19mer}"
-    post_guide_sequence_Empty_19mer="^GNNNNNNNNNNNNNNNNNN\${post_guide_sequence_Empty:0:post_guide_sequence_length_19mer}"
-    post_guide_sequence_nonEmpty_20mer="^GNNNNNNNNNNNNNNNNNNN\${post_guide_sequence_nonEmpty:0:post_guide_sequence_length_20mer}"
-    post_guide_sequence_Empty_20mer="^GNNNNNNNNNNNNNNNNNNN\${post_guide_sequence_Empty:0:post_guide_sequence_length_20mer}"
-    post_guide_sequence_nonEmpty_21mer="^GNNNNNNNNNNNNNNNNNNNN\${post_guide_sequence_nonEmpty:0:post_guide_sequence_length_21mer}"
-    post_guide_sequence_Empty_21mer="^GNNNNNNNNNNNNNNNNNNNN\${post_guide_sequence_Empty:0:post_guide_sequence_length_21mer}"
-    post_guide_sequence_Empty_Empty="^\${post_guide_sequence_Empty_Empty}"
-
-    err_20mer=1
-    err_21mer=1
-
-    if [[ \${stagger_length} -eq 3 ]]
+    if [[ ${params.fixed_stagger_forward} -ne 0 ]]
     then
-        err_21mer=0
-    fi
-
-    if [[ \${stagger_length} -eq 4 ]]
-    then
-        err_20mer=0
-        err_21mer=0
+        remove_beginning_R1=\$(expr ${params.fixed_stagger_forward} + ${barcode_spacer_length_R1})
+        echo \${remove_beginning_R1}
     fi
 
     cutadapt ${id}_R1.demux.fastq.gz -j ${task.cpus} -u \${remove_beginning_R1} -o ${id}_R1_trimmed_beginning.fastq.gz
     cutadapt ${id}_R2.demux.fastq.gz -j ${task.cpus} -u \${remove_beginning_R2} -o ${id}_R2_trimmed_beginning.fastq.gz
 
-    cutadapt -j ${task.cpus} --no-indels --action=none \
-        -g "nonEmpty_18mer=\${post_guide_sequence_nonEmpty_18mer};e=1" -g "Empty_18mer=\${post_guide_sequence_Empty_18mer};e=1" \
-        -g "nonEmpty_19mer=\${post_guide_sequence_nonEmpty_19mer};e=1" -g "Empty_19mer=\${post_guide_sequence_Empty_19mer};e=1" \
-        -g "nonEmpty_20mer=\${post_guide_sequence_nonEmpty_20mer};e=\${err_20mer}" -g "Empty_20mer=\${post_guide_sequence_Empty_20mer};e=\${err_20mer}" \
-        -g "nonEmpty_21mer=\${post_guide_sequence_nonEmpty_21mer};e=\${err_21mer}" -g "Empty_21mer=\${post_guide_sequence_Empty_21mer};e=\${err_21mer}" \
-        -g "Empty_Empty=\${post_guide_sequence_Empty_Empty};e=1" \
-        -o "${id}_R1_{name}_trimmed_beginning.fastq.gz" -p "${id}_R2_{name}_trimmed_beginning.fastq.gz" \
-        ${id}_R1_trimmed_beginning.fastq.gz ${id}_R2_trimmed_beginning.fastq.gz
+    if [[ "${params.library_composition_details}" = false ]]
+    then
 
-    cat ${id}_R1_nonEmpty_18mer_trimmed_beginning.fastq.gz ${id}_R1_nonEmpty_19mer_trimmed_beginning.fastq.gz ${id}_R1_nonEmpty_20mer_trimmed_beginning.fastq.gz ${id}_R1_nonEmpty_21mer_trimmed_beginning.fastq.gz > ${id}_R1_nonEmpty_trimmed_beginning.fastq.gz
-    cat ${id}_R2_nonEmpty_18mer_trimmed_beginning.fastq.gz ${id}_R2_nonEmpty_19mer_trimmed_beginning.fastq.gz ${id}_R2_nonEmpty_20mer_trimmed_beginning.fastq.gz ${id}_R1_nonEmpty_21mer_trimmed_beginning.fastq.gz > ${id}_R2_nonEmpty_trimmed_beginning.fastq.gz
+        cutadapt ${id}_R1_trimmed_beginning.fastq.gz -j ${task.cpus} -l ${params.guide_length} -o ${id}_R1.trimmed.fastq.gz
+        rm ${id}_R1_trimmed_beginning.fastq.gz
+        
+        cutadapt ${id}_R2_trimmed_beginning.fastq.gz -j ${task.cpus} -l ${params.guide_length} -o ${id}_R2.trimmed.fastq.gz
+        rm ${id}_R2_trimmed_beginning.fastq.gz
 
-    cat ${id}_R1_Empty_18mer_trimmed_beginning.fastq.gz ${id}_R1_Empty_19mer_trimmed_beginning.fastq.gz ${id}_R1_Empty_20mer_trimmed_beginning.fastq.gz ${id}_R1_Empty_21mer_trimmed_beginning.fastq.gz > ${id}_R1_Empty_trimmed_beginning.fastq.gz
-    cat ${id}_R2_Empty_18mer_trimmed_beginning.fastq.gz ${id}_R2_Empty_19mer_trimmed_beginning.fastq.gz ${id}_R2_Empty_20mer_trimmed_beginning.fastq.gz ${id}_R1_Empty_21mer_trimmed_beginning.fastq.gz > ${id}_R2_Empty_trimmed_beginning.fastq.gz
+        fastqc -t ${task.cpus} -q ${id}*trimmed*.fastq.gz
 
-    cutadapt ${id}_R1_nonEmpty_trimmed_beginning.fastq.gz -j ${task.cpus} -l ${params.guide_length} -o ${id}_R1.trimmed.fastq.gz
-    rm ${id}_R1_trimmed_beginning.fastq.gz
+        touch ${id}_R1_nonEmpty_trimmed_beginning.fastq.gz ${id}_R2_nonEmpty_trimmed_beginning.fastq.gz 
+        touch ${id}_R1_Empty_trimmed_beginning.fastq.gz ${id}_R2_Empty_trimmed_beginning.fastq.gz
+    else
 
-    
-    cutadapt ${id}_R2_nonEmpty_trimmed_beginning.fastq.gz -j ${task.cpus} -l ${params.guide_length} -o ${id}_R2.trimmed.fastq.gz
-    rm ${id}_R2_trimmed_beginning.fastq.gz
+        post_guide_sequence_nonEmpty="${params.post_guide_sequence_nonEmpty}"
+        post_guide_sequence_Empty="${params.post_guide_sequence_Empty}"
+        post_guide_sequence_Empty_Empty="${params.post_guide_sequence_Empty_Empty}"
+        
+        post_guide_sequence_length_18mer=\$(expr ${params.forward_read_length} - ${params.barcode_random_length} - \${remove_beginning_R1} - 18)
+        post_guide_sequence_length_19mer=\$(expr ${params.forward_read_length} - ${params.barcode_random_length} - \${remove_beginning_R1} - 19)
+        post_guide_sequence_length_20mer=\$(expr ${params.forward_read_length} - ${params.barcode_random_length} - \${remove_beginning_R1} - 20)
+        post_guide_sequence_length_21mer=\$(expr ${params.forward_read_length} - ${params.barcode_random_length} - \${remove_beginning_R1} - 21)
 
-    fastqc -t ${task.cpus} -q ${id}*trimmed*.fastq.gz
+        post_guide_sequence_nonEmpty_18mer="^GNNNNNNNNNNNNNNNNN\${post_guide_sequence_nonEmpty:0:post_guide_sequence_length_18mer}"
+        post_guide_sequence_Empty_18mer="^GNNNNNNNNNNNNNNNNN\${post_guide_sequence_Empty:0:post_guide_sequence_length_18mer}"
+        post_guide_sequence_nonEmpty_19mer="^GNNNNNNNNNNNNNNNNNN\${post_guide_sequence_nonEmpty:0:post_guide_sequence_length_19mer}"
+        post_guide_sequence_Empty_19mer="^GNNNNNNNNNNNNNNNNNN\${post_guide_sequence_Empty:0:post_guide_sequence_length_19mer}"
+        post_guide_sequence_nonEmpty_20mer="^GNNNNNNNNNNNNNNNNNNN\${post_guide_sequence_nonEmpty:0:post_guide_sequence_length_20mer}"
+        post_guide_sequence_Empty_20mer="^GNNNNNNNNNNNNNNNNNNN\${post_guide_sequence_Empty:0:post_guide_sequence_length_20mer}"
+        post_guide_sequence_nonEmpty_21mer="^GNNNNNNNNNNNNNNNNNNNN\${post_guide_sequence_nonEmpty:0:post_guide_sequence_length_21mer}"
+        post_guide_sequence_Empty_21mer="^GNNNNNNNNNNNNNNNNNNNN\${post_guide_sequence_Empty:0:post_guide_sequence_length_21mer}"
+        post_guide_sequence_Empty_Empty="^\${post_guide_sequence_Empty_Empty}"
+
+        err_20mer=1
+        err_21mer=1
+
+        if [[ \${stagger_length} -eq 3 ]]
+        then
+            err_21mer=0
+        fi
+
+        if [[ \${stagger_length} -eq 4 ]]
+        then
+            err_20mer=0
+            err_21mer=0
+        fi
+
+        cutadapt -j ${task.cpus} --no-indels --action=none \
+            -g "nonEmpty_18mer=\${post_guide_sequence_nonEmpty_18mer};e=1" -g "Empty_18mer=\${post_guide_sequence_Empty_18mer};e=1" \
+            -g "nonEmpty_19mer=\${post_guide_sequence_nonEmpty_19mer};e=1" -g "Empty_19mer=\${post_guide_sequence_Empty_19mer};e=1" \
+            -g "nonEmpty_20mer=\${post_guide_sequence_nonEmpty_20mer};e=\${err_20mer}" -g "Empty_20mer=\${post_guide_sequence_Empty_20mer};e=\${err_20mer}" \
+            -g "nonEmpty_21mer=\${post_guide_sequence_nonEmpty_21mer};e=\${err_21mer}" -g "Empty_21mer=\${post_guide_sequence_Empty_21mer};e=\${err_21mer}" \
+            -g "Empty_Empty=\${post_guide_sequence_Empty_Empty};e=1" \
+            -o "${id}_R1_{name}_trimmed_beginning.fastq.gz" -p "${id}_R2_{name}_trimmed_beginning.fastq.gz" \
+            ${id}_R1_trimmed_beginning.fastq.gz ${id}_R2_trimmed_beginning.fastq.gz
+
+        cat ${id}_R1_nonEmpty_18mer_trimmed_beginning.fastq.gz ${id}_R1_nonEmpty_19mer_trimmed_beginning.fastq.gz ${id}_R1_nonEmpty_20mer_trimmed_beginning.fastq.gz ${id}_R1_nonEmpty_21mer_trimmed_beginning.fastq.gz > ${id}_R1_nonEmpty_trimmed_beginning.fastq.gz
+        cat ${id}_R2_nonEmpty_18mer_trimmed_beginning.fastq.gz ${id}_R2_nonEmpty_19mer_trimmed_beginning.fastq.gz ${id}_R2_nonEmpty_20mer_trimmed_beginning.fastq.gz ${id}_R1_nonEmpty_21mer_trimmed_beginning.fastq.gz > ${id}_R2_nonEmpty_trimmed_beginning.fastq.gz
+
+        cat ${id}_R1_Empty_18mer_trimmed_beginning.fastq.gz ${id}_R1_Empty_19mer_trimmed_beginning.fastq.gz ${id}_R1_Empty_20mer_trimmed_beginning.fastq.gz ${id}_R1_Empty_21mer_trimmed_beginning.fastq.gz > ${id}_R1_Empty_trimmed_beginning.fastq.gz
+        cat ${id}_R2_Empty_18mer_trimmed_beginning.fastq.gz ${id}_R2_Empty_19mer_trimmed_beginning.fastq.gz ${id}_R2_Empty_20mer_trimmed_beginning.fastq.gz ${id}_R1_Empty_21mer_trimmed_beginning.fastq.gz > ${id}_R2_Empty_trimmed_beginning.fastq.gz
+
+        cutadapt ${id}_R1_nonEmpty_trimmed_beginning.fastq.gz -j ${task.cpus} -l ${params.guide_length} -o ${id}_R1.trimmed.fastq.gz
+        rm ${id}_R1_trimmed_beginning.fastq.gz
+
+        
+        cutadapt ${id}_R2_nonEmpty_trimmed_beginning.fastq.gz -j ${task.cpus} -l ${params.guide_length} -o ${id}_R2.trimmed.fastq.gz
+        rm ${id}_R2_trimmed_beginning.fastq.gz
+
+        fastqc -t ${task.cpus} -q ${id}*trimmed*.fastq.gz
+    fi
 
     tar -c --use-compress-program=pigz -f ${id}.trimmed.tar ${id}_R1.trimmed* ${id}_R2.trimmed*
     """
@@ -416,6 +444,11 @@ process multiqc_read_details {
     export LC_ALL=C.UTF-8
     export LANG=C.UTF-8
     multiqc --interactive -f -x *.run .
+
+    if [ ! -f multiqc_report.html ]
+    then
+        touch dummy_multiqc_report.html
+    fi
     """
 }
 
@@ -476,7 +509,7 @@ process align {
         -x ${index}/index \
         --ignore-quals \
         -L 21 \
-        -N 1 \
+        -N 0 \
         --very-sensitive \
         --score-min L,-36,0 \
         --np 25 \
