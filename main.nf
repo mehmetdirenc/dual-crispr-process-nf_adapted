@@ -30,9 +30,7 @@ def helpMessage() {
                                             (default: 'barcodes.fasta')
                                             The following columns are required:
                                                 - lane:         name of BAM / FASTQ input file
-                                                - sample_name:  name of demultiplexed sample followed by an integer number (1-4)
-                                                                corresponding to the length of the stagger sequence used for this sample,
-                                                                seperated by the keyword STAGGERLENGTH (e.g. STAGGERLENGTH1, STAGGERLENGTH2, ...)
+                                                - sample_name:  name of demultiplexed sample 
                                                 - barcode:      8 nucleotide long sequence of the stagger, followed by the sample barcode,
                                                                 filled up to a length of 8 nucleotides with the subsequent sequence of the spacer
 
@@ -43,12 +41,12 @@ def helpMessage() {
                                             (default for sgRNA: 4)
 
         --barcode_demux_mismatches          Number of mismatches allowed during demultiplexing
-                                            of barcode. (default: 1)
+                                            of barcode. (default: 0)
 
         --barcode_demux_location            Read location of the sample barcode. Only the specified read is used for demultiplexing.
-                                            Either 'forward' or 'reverse' (default: 'forward')
+                                            Either 'both', 'forward' or 'reverse' (default: 'both')
 
-        --fixed_stagger_forward             Set if stagger length on forward read is constant, e.g. when barcode_demux_location is set to reverse. (default: 0)
+        --fixed_barcode_forward             Set to 1 if barcode on forward read is uniform across all samples and when barcode_demux_location is set to 'both'. (default: 0)
 
         --barcode_length                    Number of nucleotides in sample barcode.
                                             (default: 4)
@@ -117,7 +115,7 @@ log.info " spacer R1 (nt)                   : ${params.spacer_length_R1}"
 log.info " spacer R2 (nt)                   : ${params.spacer_length_R2}"
 log.info " demultiplex mismatches           : ${params.barcode_demux_mismatches}"
 log.info " sample barcode location          : ${params.barcode_demux_location}"
-log.info " fixed stagger on forward read    : ${params.fixed_stagger_forward}"
+log.info " fixed barcode on forward read    : ${params.fixed_barcode_forward}"
 log.info " first guide padding base         : ${params.padding_bases_first_guide}"
 log.info " matching guide padding base      : ${params.padding_bases_matching_guide}"
 log.info " reverse complement               : ${params.reverse_complement}"
@@ -210,23 +208,12 @@ process trim_random_barcode {
     position = params.barcode_random_length
     """
     tar -x --use-compress-program=pigz -f ${files}
+    
+    mv ${lane}_R1.fastq.gz input.fastq.gz
+    cutadapt -O 30 -g NNNNATATCCCTTGGAGAAAAGCCTTGTTT -e 3 --action=retain -j ${task.cpus} input.fastq.gz -o ${lane}_R1.fastq.gz
 
-    if [[ ${position} -gt 0 ]]
-    then
-      mv ${lane}_R1.fastq.gz input.fastq.gz
-      cutadapt -u ${position} -j ${task.cpus} input.fastq.gz -o ${lane}_R1.fastq.gz
-
-      mv ${lane}_R2.fastq.gz input.fastq.gz
-      cutadapt -u ${position} -j ${task.cpus} input.fastq.gz -o ${lane}_R2.fastq.gz
-    else
-      mv ${lane}_R1.fastq.gz input.fastq.gz
-      path_to_file=\$(readlink -f ${lane}_R1.fastq.gz)
-      cp \${path_to_file} ${lane}_R1.fastq.gz
-
-      mv ${lane}_R2.fastq.gz input.fastq.gz
-      path_to_file=\$(readlink -f ${lane}_R2.fastq.gz)
-      cp \${path_to_file} ${lane}_R2.fastq.gz
-    fi
+    mv ${lane}_R2.fastq.gz input.fastq.gz
+    cutadapt -O 37 -g NNNNCTTGCTATGCACTCTTGTGCTTAGCTCTGAAAC -e 3 --action=retain -j ${task.cpus} input.fastq.gz -o ${lane}_R2.fastq.gz
 
     rm input.fastq.gz
     rm ${lane}.tar
@@ -257,13 +244,14 @@ demuxBarcodeFiles
     .groupTuple()
     .set { demuxFiles }
 
+
 process demultiplex {
 
     tag { lane }
 
     input:
     set val(lane), file(files) from demuxFiles
-
+    
     output:
     set val(lane), file('*.demux.tar') into splitFiles, splitFilesFastQC
 
@@ -274,16 +262,31 @@ process demultiplex {
     if [[ ${params.barcode_demux_location} == 'forward' ]]
     then
         cutadapt -j ${task.cpus} -e ${params.barcode_demux_mismatches} --no-indels -g file:${files[0]} --action=none -o "{name}_R1.demux.fastq.gz" -p "{name}_R2.demux.fastq.gz" ${lane}_R1.fastq.gz ${lane}_R2.fastq.gz
-    elif [[ ${params.barcode_demux_location} == 'reverse' ]]
+    fi
+
+    if [[ ${params.barcode_demux_location} == 'reverse' ]]
     then
         cutadapt -j ${task.cpus} -e ${params.barcode_demux_mismatches} --no-indels -g file:${files[0]} --action=none -o "{name}_R2.demux.fastq.gz" -p "{name}_R1.demux.fastq.gz" ${lane}_R2.fastq.gz ${lane}_R1.fastq.gz
-    else
-        echo ${params.barcode_demux_location} not a valid option for the parameter barcode_demux_location.
-        exit
+    fi
+
+    if [[ ${params.barcode_demux_location} == 'both' ]]
+    then
+
+        if [[ ${params.fixed_barcode_forward} == '1' ]]
+        then
+            cutadapt -j ${task.cpus} -e ${params.barcode_demux_mismatches} --no-indels -g uniform=^AGCC --action=none -o "{name}_R1.fastq.gz" -p "{name}_R2.fastq.gz" ${lane}_R1.fastq.gz ${lane}_R2.fastq.gz
+            cutadapt -j ${task.cpus} -e ${params.barcode_demux_mismatches} --no-indels -g file:${files[0]} --action=none -o "{name}_R2.demux.fastq.gz" -p "{name}_R1.demux.fastq.gz" uniform_R2.fastq.gz uniform_R1.fastq.gz
+        else
+            cutadapt -j ${task.cpus} -e ${params.barcode_demux_mismatches} --no-indels --pair-adapters -g file:${files[0]} -G file:${files[0]} --action=none -o "{name}_R2.demux.fastq.gz" -p "{name}_R1.demux.fastq.gz" ${lane}_R2.fastq.gz ${lane}_R1.fastq.gz
+        fi
+
     fi
 
     mv unknown_R1.demux.fastq.gz ${lane}_unknown_R1.demux.fastq.gz
     mv unknown_R2.demux.fastq.gz ${lane}_unknown_R2.demux.fastq.gz
+    cat unknown_R1.fastq.gz >> ${lane}_unknown_R1.demux.fastq.gz
+    cat unknown_R2.fastq.gz >> ${lane}_unknown_R2.demux.fastq.gz
+    rm unknown_R1.fastq.gz unknown_R2.fastq.gz uniform_R1.fastq.gz uniform_R2.fastq.gz
 
     for file in *_R1.demux.fastq.gz;
     do
@@ -334,27 +337,14 @@ process trim_barcode_and_spacer {
     """
     tar -x --use-compress-program=pigz -f ${files}
 
-    str=${id}
-    stagger_length=\${str: -1}
-    remove_beginning_R1=\$(expr \${stagger_length} + ${barcode_spacer_length_R1})
-    remove_beginning_R2=\$(expr \${stagger_length} + ${barcode_spacer_length_R2})
 
-    if [[ ${params.fixed_stagger_forward} -ne 0 ]]
-    then
-        remove_beginning_R1=\$(expr ${params.fixed_stagger_forward} + ${barcode_spacer_length_R1})
-        echo \${remove_beginning_R1}
-    fi
-
-    cutadapt ${id}_R1.demux.fastq.gz -j ${task.cpus} -u \${remove_beginning_R1} -o ${id}_R1_trimmed_beginning.fastq.gz
-    cutadapt ${id}_R2.demux.fastq.gz -j ${task.cpus} -u \${remove_beginning_R2} -o ${id}_R2_trimmed_beginning.fastq.gz
+    cutadapt -j ${task.cpus} -u ${barcode_spacer_length_R1} -U ${barcode_spacer_length_R2} -o ${id}_R1_trimmed_beginning.fastq.gz -p ${id}_R2_trimmed_beginning.fastq.gz ${id}_R1.demux.fastq.gz ${id}_R2.demux.fastq.gz
 
     if [[ "${params.library_composition_details}" = false ]]
     then
 
-        cutadapt ${id}_R1_trimmed_beginning.fastq.gz -j ${task.cpus} -l ${params.guide_length} -o ${id}_R1.trimmed.fastq.gz
+        cutadapt -j ${task.cpus} -l ${params.guide_length} --minimum-length 21 -o ${id}_R1.trimmed.fastq.gz -p ${id}_R2.trimmed.fastq.gz ${id}_R1_trimmed_beginning.fastq.gz ${id}_R2_trimmed_beginning.fastq.gz
         rm ${id}_R1_trimmed_beginning.fastq.gz
-        
-        cutadapt ${id}_R2_trimmed_beginning.fastq.gz -j ${task.cpus} -l ${params.guide_length} -o ${id}_R2.trimmed.fastq.gz
         rm ${id}_R2_trimmed_beginning.fastq.gz
 
         fastqc -t ${task.cpus} -q ${id}*trimmed*.fastq.gz
