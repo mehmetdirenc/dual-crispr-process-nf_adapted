@@ -284,9 +284,16 @@ process demultiplex {
 
     mv unknown_R1.demux.fastq.gz ${lane}_unknown_R1.demux.fastq.gz
     mv unknown_R2.demux.fastq.gz ${lane}_unknown_R2.demux.fastq.gz
-    cat unknown_R1.fastq.gz >> ${lane}_unknown_R1.demux.fastq.gz
-    cat unknown_R2.fastq.gz >> ${lane}_unknown_R2.demux.fastq.gz
-    rm unknown_R1.fastq.gz unknown_R2.fastq.gz uniform_R1.fastq.gz uniform_R2.fastq.gz
+
+    if [[ ${params.barcode_demux_location} == 'both' ]]
+    then
+        if [[ ${params.fixed_barcode_forward} == '1' ]]
+        then
+            cat unknown_R1.fastq.gz >> ${lane}_unknown_R1.demux.fastq.gz
+            cat unknown_R2.fastq.gz >> ${lane}_unknown_R2.demux.fastq.gz
+            rm unknown_R1.fastq.gz unknown_R2.fastq.gz uniform_R1.fastq.gz uniform_R2.fastq.gz
+        fi
+    fi
 
     for file in *_R1.demux.fastq.gz;
     do
