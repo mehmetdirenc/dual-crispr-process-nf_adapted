@@ -134,8 +134,8 @@ Channel
     .set { rawBamFiles }
 
 Channel
-    .fromPath( "${params.inputDir}/*.{fastq,fq}.gz" )
-    .map { file -> tuple( file.baseName.replaceAll(/\.fastq|\.fq/, ''), file ) }
+    .fromPath( "${params.inputDir}/*.tar" )
+    .map { file -> tuple( file.baseName, file ) }
     .set { rawFastqFiles }
 
 Channel
@@ -179,14 +179,29 @@ process reverse_complement_fastq {
     set val(lane), file(fastq) from antisenseFastqFiles
 
     output:
-    set val(lane), file("${lane}.fastq.gz") into rcfastqFiles
+    set val(lane), file("${lane}.tar") into rcfastqFiles
 
     script:
     """
-    mv ${fastq} input.fastq.gz
+    tar -x --use-compress-program=pigz -f ${fastq}
+
+    mv ${lane}_R1.fastq.gz input.fastq.gz
     zcat input.fastq.gz | fastx_reverse_complement \
         -z \
-        -o ${lane}.fastq.gz
+        -o ${lane}_R1.fastq.gz
+
+    
+    rm input.fastq.gz
+    mv ${lane}_R2.fastq.gz input.fastq.gz
+
+    zcat input.fastq.gz | fastx_reverse_complement \
+        -z \
+        -o ${lane}_R2.fastq.gz
+
+    rm input.fastq.gz
+    rm ${lane}.tar
+    tar -c --use-compress-program=pigz -f ${lane}.tar ${lane}_R1.fastq.gz ${lane}_R2.fastq.gz
+
     """
 }
 
