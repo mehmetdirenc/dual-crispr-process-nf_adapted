@@ -18,7 +18,7 @@ count_files  <- args[2:length(args)]
 `%>%` <- dplyr::`%>%`
 
 read_featurecounts <- function(path) {
-  readr::read_tsv(path, comment = "#") %>%
+  readr::read_tsv(path, skip = 1) %>%
     dplyr::select(-Chr, -Start, -End, -Strand, -Length) %>%
     dplyr::rename(id = Geneid)
 }
@@ -28,9 +28,9 @@ library <- readr::read_tsv(library_file) %>%
   dplyr::select(id, group)
 
 names(count_files) <- stringr::str_replace(basename(count_files), ".txt", "")
-pattern <- paste(c(paste0(names(count_files), "_"), ".sam"), collapse = "|")
+pattern <- paste(c(paste0(names(count_files), "#"), "\\.sam"), collapse = "|")
 
-counts <- lapply(count_files, read_featurecounts) %>%
+lapply(count_files, read_featurecounts) %>%
   purrr::map(tidyr::gather, sample_name, count, -id) %>%
   dplyr::bind_rows() %>%
   dplyr::mutate(sample_name = stringr::str_replace_all(sample_name, pattern, "")) %>%
@@ -39,9 +39,6 @@ counts <- lapply(count_files, read_featurecounts) %>%
   dplyr::ungroup() %>%
   tidyr::spread(sample_name, count) %>%
   dplyr::inner_join(library, by = "id") %>%
-  dplyr::select(id, group, dplyr::everything())
-
-# counts[rowMeans(as.matrix(counts[,3:ncol(counts)]))>5,]
-counts %>%
+  dplyr::select(id, group, dplyr::everything()) %>%
   readr::format_tsv() %>%
   cat

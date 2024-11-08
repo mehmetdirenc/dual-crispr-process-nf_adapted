@@ -1,7 +1,7 @@
-lane	sample_name	barcode
-test_lane_1	test_sample_1	CCCA
-test_lane_1	test_sample_2	CCTC
-test_lane_1	test_sample_3	GGTG
-test_lane_2	test_sample_4	CCCA
-test_lane_2	test_sample_5	CCTC
-test_lane_2	test_sample_6	GGTG
+lane	sample_name	barcode_R1	barcode_R2
+test_lane	test_sample_1	AGCC	AGCC
+test_lane	test_sample_2	ATAC	ATAC
+test_lane	test_sample_3	ATCG	ATCG
+test_lane	test_sample_4	GTCA	GTCA
+test_lane	test_sample_5	TCGC	TCGC
+test_lane	test_sample_6	AGTC	AGTC

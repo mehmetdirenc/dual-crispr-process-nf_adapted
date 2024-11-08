@@ -28,9 +28,9 @@ library_name <- stringr::str_replace(basename(input_file), ".txt", "")
 ### import
 raw <- readr::read_tsv(input_file)
 
-#########
+###########
 # library #
-#########
+###########
 
 sequence_first_guide <- paste0(raw$sequence, padding_bases_first_guide) %>%
   substr(start=0, stop=21)

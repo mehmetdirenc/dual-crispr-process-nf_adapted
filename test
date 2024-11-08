@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-PROFILE=${1:-singularity}
+PROFILE=${1:-apptainer}
 echo "Using profile ${PROFILE}."
 
 nextflow run main.nf \
@@ -8,7 +8,8 @@ nextflow run main.nf \
     --library test_data/library.txt \
     --barcodes test_data/barcodes.txt \
     --inputDir test_data/01_raw \
-    --outputDir test_output
+    --outputDir test_output \
+    -resume
 
 OBSERVED='test_output/counts/library/counts_mageck.txt'
 EXPECTED='test_data/expected_output.txt'
