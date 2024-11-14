@@ -6,7 +6,7 @@ Process dual-sgRNA CRISPR functional genetic screening data
 ### Nextflow
 Install `nextflow` (DSL2) following the instructions at https://www.nextflow.io/docs/latest/getstarted.html
 
-### Singularity
+### Apptainer
 Install `apptainer` following the instructions at
 https://apptainer.org/docs/user/latest/quick_start.html#installation
 

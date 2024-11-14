@@ -2,16 +2,17 @@ process DEMULTIPLEX {
     tag { lane }
 
     input:
-    tuple val(lane), path(tar), path(barcode_R1), path(barcode_R2)
+    tuple val(lane), path(barcodes), path(fastq_files)
 
     output:
-    tuple val(lane), path("*.tar"), emit: demuxed
+    tuple val(lane), path("*.fastq.gz"), emit: demuxed
 
     script:
+    barcode_R1 = barcodes[0]
+    barcode_R2 = barcodes[1]
+    R1 = fastq_files[0]
+    R2 = fastq_files[1]
     """
-    tar -x --use-compress-program=pigz -f ${tar}
-    rm ${tar}
-
     if [[ ${params.barcode_demux_location} == 'forward' ]]
     then
         cutadapt \
@@ -22,7 +23,7 @@ process DEMULTIPLEX {
             --action=none \
             -o "${lane}#{name}_R1.fastq.gz" \
             -p "${lane}#{name}_R2.fastq.gz" \
-            ${lane}_R1.fastq.gz ${lane}_R2.fastq.gz
+            ${R1} ${R2}
     fi
 
     if [[ ${params.barcode_demux_location} == 'reverse' ]]
@@ -34,7 +35,7 @@ process DEMULTIPLEX {
             --action=none \
             -o "${lane}#{name}_R2.fastq.gz" \
             -p "${lane}#{name}_R1.fastq.gz" \
-            ${lane}_R2.fastq.gz ${lane}_R1.fastq.gz
+            ${R1} ${R2}
     fi
 
     if [[ ${params.barcode_demux_location} == 'both' ]]
@@ -47,15 +48,9 @@ process DEMULTIPLEX {
             -g file:${barcode_R1} \
             -G file:${barcode_R2} \
             --action=none \
-            -o "${lane}#{name}_R2.fastq.gz" \
-            -p "${lane}#{name}_R1.fastq.gz" \
-            ${lane}_R2.fastq.gz ${lane}_R1.fastq.gz
+            -o "${lane}#{name}_R1.fastq.gz" \
+            -p "${lane}#{name}_R2.fastq.gz" \
+            ${R1} ${R2}
     fi
-
-    for file in *_R1.fastq.gz;
-    do
-      filename="\${file%_R1.fastq.gz}"
-      tar -c --use-compress-program=pigz -f \${filename}.tar \${filename}_R1.fastq.gz \${filename}_R2.fastq.gz
-    done
     """
 }

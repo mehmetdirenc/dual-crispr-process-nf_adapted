@@ -15,10 +15,9 @@ def helpMessage() {
      nextflow run zuberlab/crispr-process-nf
 
      Options:
-        --inputDir                          Input directory containing raw files. Either BAM or FASTQ files (R1 & R2) as tar archive.
+        --inputDir                          Input directory containing raw files. Either BAM or FASTQ files (R1 & R2).
                                             The FASTQ files must be named <lane>_R1.fastq.gz and <lane>_R2.fastq.gz.
-                                            To generate the archive use the following command:
-                                            'tar -c --use-compress-program=pigz -f <lane>.tar <lane>_R1.fastq.gz <lane>_R2.fastq.gz'
+                                            The BAM files must be named <lane>.bam.
                                             (default: '01_raw')
 
         --outputDir                         Output directory for processed files.
@@ -124,8 +123,13 @@ include { MULTIQC } from './modules/multiqc'
 ch_input_bam = Channel.fromPath("${params.inputDir}/*.bam")
     .map { file -> tuple(file.baseName, file) }
 
-ch_input_fastq = Channel.fromPath("${params.inputDir}/*.tar")
-    .map { file -> tuple(file.baseName, file) }
+ch_input_fastq = Channel.fromPath("${params.inputDir}/*.fastq.gz")
+    .map {
+        file ->
+            def lane = file.name.toString().replaceAll(/_R[12]\.fastq\.gz$/, '')
+            tuple(lane, file)
+        }
+    .groupTuple()
 
 ch_barcodes = Channel.fromPath(params.barcodes)
 ch_library = Channel.fromPath(params.library)
@@ -144,24 +148,31 @@ workflow {
     // Process barcodes
     ch_processed_barcodes = PROCESS_BARCODES(ch_barcodes)
 
-    // Combine trimmed random barcode files and processed barcodes
-    ch_trimmed_random_barcodes = ch_trimmed_random.combine(ch_processed_barcodes)
-
+    // Combine processed barcodes with trimmed random barcodes
+    ch_trimmed_random_barcodes = ch_processed_barcodes
+        .flatten()
+        .map { barcode -> 
+            def lane = barcode.name.toString().replaceAll(/_R[12]\.fasta$/, '')
+            [lane, barcode]
+        }
+        .groupTuple()
+        .join(ch_trimmed_random)
+    
     // Demultiplex
     ch_demuxed = DEMULTIPLEX(ch_trimmed_random_barcodes)
 
     // Flatten demultiplexed files
     ch_demuxed_flattened = ch_demuxed
-        .flatMap { lane, files -> 
-            files.collect { file ->
-                def baseName = file.name.toString().replaceAll(/\.tar$/, '')
-                tuple(lane, baseName, file)
-            }
-        }
+        .flatMap { lane, files ->
+                files.collect { file ->
+                    def id = file.name.toString().replaceAll(/_R[12]\.fastq\.gz$/, '')
+                    [lane, id, file]
+                }
+        }.groupTuple(by: [0,1])
 
     // Filter out samples with unknown barcodes
     ch_demuxed_flattened_filtered = ch_demuxed_flattened
-        .filter { lane, baseName, file -> (baseName =~ /^(?!.*#unknown).*$/) }
+        .filter { !it[1].toString().endsWith("#unknown") }
 
     // Trim barcode and spacer
     ch_trimmed_spacer = TRIM_BARCODE_AND_SPACER(ch_demuxed_flattened_filtered)
@@ -175,7 +186,7 @@ workflow {
     // Combine trimmed spacer files and bowtie index
     ch_trimmed_spacer_combined = ch_trimmed_spacer
         .combine(ch_bt2_index)
-
+    
     // Align
     ch_aligned = ALIGN(ch_trimmed_spacer_combined)
 
@@ -184,7 +195,7 @@ workflow {
         .map { lane, id, file -> tuple(lane, file) }
         .groupTuple()
 
-    // // Count
+    // Count
     ch_counted = COUNT(ch_grouped_aligned, ch_library_out.saf)
 
     // Combine counts

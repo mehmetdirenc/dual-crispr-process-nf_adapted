@@ -2,7 +2,7 @@ process ALIGN {
     tag { "${id}" }
 
     input:
-    tuple val(lane), val(id), path(tar), path(index)
+    tuple val(lane), val(id), path(fastq_files), path(index)
 
     output:
     tuple val(lane), val(id), path("${id}.sam"), emit: alignedFiles
@@ -11,9 +11,9 @@ process ALIGN {
     path("${id}.sam.flagstat"), emit: alignFlagstats
 
     script:
+    R1 = fastq_files[0]
+    R2 = fastq_files[1]
     """
-    tar -x --use-compress-program=pigz -f ${tar}
-
     bowtie2 \
         --threads \$((${task.cpus})) \
         -x ${index}/index \
@@ -28,8 +28,8 @@ process ALIGN {
         --no-overlap \
         --no-contain \
         --fr \
-        -1 ${id}_R1.fastq.gz \
-        -2 ${id}_R2.fastq.gz 2> ${id}.log > ${id}.sam
+        -1 ${R1} \
+        -2 ${R2} 2> ${id}.log > ${id}.sam
 
     samtools stats ${id}.sam > ${id}.sam.stats
     samtools flagstats ${id}.sam > ${id}.sam.flagstat

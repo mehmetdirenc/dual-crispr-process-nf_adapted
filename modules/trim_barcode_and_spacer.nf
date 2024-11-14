@@ -2,24 +2,22 @@ process TRIM_BARCODE_AND_SPACER {
     tag { id }
 
     input:
-    tuple val(lane), val(id), path(tar)
+    tuple val(lane), val(id), path(fastq_files)
 
     output:
-    tuple val(lane), val(id), path("${id}.tar"), emit: trimmed
+    tuple val(lane), val(id), path("output/${lane}*.fastq.gz"), emit: trimmed
 
     script:
+    R1 = fastq_files[0]
+    R2 = fastq_files[1]
     """
     barcode=\$(printf "%${params.barcode_length}s" | tr ' ' "N")
     barcode_spacer_R1="\${barcode}${params.spacer_seq_R1}"    
     barcode_spacer_R2="\${barcode}${params.spacer_seq_R2}"
     length_barcode_spacer_R1=\${#barcode_spacer_R1}
     length_barcode_spacer_R2=\${#barcode_spacer_R2}
-    
-    tar -x --use-compress-program=pigz -f ${tar}
 
-    mv ${tar} input.tar
-    mv ${id}_R1.fastq.gz input_R1.fastq.gz
-    mv ${id}_R2.fastq.gz input_R2.fastq.gz
+    mkdir -p output
 
     cutadapt \
         -j ${task.cpus} \
@@ -27,10 +25,8 @@ process TRIM_BARCODE_AND_SPACER {
         -U \${length_barcode_spacer_R2} \
         -l ${params.guide_length} \
         --minimum-length ${params.guide_length} \
-        -o ${id}_R1.fastq.gz \
-        -p ${id}_R2.fastq.gz \
-        input_R1.fastq.gz input_R2.fastq.gz
-
-    tar -c --use-compress-program=pigz -f ${id}.tar ${id}_R1.fastq.gz ${id}_R2.fastq.gz
+        -o output/${id}_R1.fastq.gz \
+        -p output/${id}_R2.fastq.gz \
+        ${R1} ${R2}
     """
 }
