@@ -67,8 +67,8 @@ def helpMessage() {
                                             (default: ACC)
      Profiles:
         standard                    local execution
-        singularity                 local execution with singularity
-        cbe                         SLURM execution with singularity on CBE cluster
+        apptainer                   local execution with apptainer
+        cbe                         SLURM execution with apptainer on CBE cluster
 
 
      Docker:
@@ -194,9 +194,10 @@ workflow {
     ch_grouped_aligned =  ch_aligned.alignedFiles
         .map { lane, id, file -> tuple(lane, file) }
         .groupTuple()
+        .combine(ch_library_out.saf)
 
     // Count
-    ch_counted = COUNT(ch_grouped_aligned, ch_library_out.saf)
+    ch_counted = COUNT(ch_grouped_aligned)
 
     // Combine counts
     COMBINE_COUNTS(ch_counted.countedFiles.collect(), ch_library)

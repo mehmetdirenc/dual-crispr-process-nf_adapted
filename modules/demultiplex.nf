@@ -35,7 +35,7 @@ process DEMULTIPLEX {
             --action=none \
             -o "${lane}#{name}_R2.fastq.gz" \
             -p "${lane}#{name}_R1.fastq.gz" \
-            ${R1} ${R2}
+            ${R2} ${R1}
     fi
 
     if [[ ${params.barcode_demux_location} == 'both' ]]

@@ -6,8 +6,7 @@ process COUNT {
                overwrite: true
 
     input:
-    tuple val(lane), path(sams)
-    path(saf)
+    tuple val(lane), path(sams), path(saf)
 
     output:
     path("${lane}.txt"), emit: countedFiles
