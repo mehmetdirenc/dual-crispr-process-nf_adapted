@@ -42,6 +42,9 @@ def helpMessage() {
         --barcode_demux_mismatches          Number of mismatches allowed during demultiplexing
                                             of barcode. (default: 0)
 
+        --demux_unknown                     Perform demultiplexing of unknown reads with all possible 
+                                            barcode combinations. (default: false)
+
         --barcode_demux_location            Read location of the sample barcode. Only the specified read is used for demultiplexing.
                                             Either 'both', 'forward' or 'reverse' (default: 'both')
 
@@ -99,6 +102,7 @@ log.info " barcode length                   : ${params.barcode_length}"
 log.info " spacer seq R1 (nt)               : ${params.spacer_seq_R1}"
 log.info " spacer seq R2 (nt)               : ${params.spacer_seq_R2}"
 log.info " demultiplex mismatches           : ${params.barcode_demux_mismatches}"
+log.info " demultiplex unknown              : ${params.demux_unknown}"
 log.info " sample barcode location          : ${params.barcode_demux_location}"
 log.info " first guide padding base         : ${params.padding_bases_first_guide}"
 log.info " matching guide padding base      : ${params.padding_bases_matching_guide}"
@@ -110,6 +114,7 @@ include { BAM_TO_FASTQ } from './modules/bam_to_fastq'
 include { TRIM_RANDOM_BARCODE } from './modules/trim_random_barcode'
 include { PROCESS_BARCODES } from './modules/process_barcodes'
 include { DEMULTIPLEX } from './modules/demultiplex'
+include { DEMULTIPLEX_UNKNOWN } from './modules/demultiplex_unknown'
 include { TRIM_BARCODE_AND_SPACER } from './modules/trim_barcode_and_spacer'
 include { PROCESS_LIBRARY } from './modules/process_library'
 include { BOWTIE_INDEX } from './modules/bowtie_index'
@@ -133,6 +138,7 @@ ch_input_fastq = Channel.fromPath("${params.inputDir}/*.fastq.gz")
 
 ch_barcodes = Channel.fromPath(params.barcodes)
 ch_library = Channel.fromPath(params.library)
+all_3mer_fasta = Channel.fromPath("$projectDir/bin/all_3mer.fasta")
 
 // Main workflow
 workflow {
@@ -170,12 +176,26 @@ workflow {
                 }
         }.groupTuple(by: [0,1])
 
-    // Filter out samples with unknown barcodes
-    ch_demuxed_flattened_filtered = ch_demuxed_flattened
-        .filter { !it[1].toString().endsWith("#unknown") }
+    // Split the channel based on whether id ends with "unknown"
+    ch_demuxed_flattened
+        .branch {
+            unknown: it[1].toString().endsWith("#unknown")
+            known: true
+        }
+        .set { ch_demuxed_flattened_split }
+
+    ch_unknown_with_metadata = ch_demuxed_flattened_split.unknown
+        .combine(all_3mer_fasta)
+        .map { lane, id, files, all_3mer_fasta -> [lane, id, files, all_3mer_fasta] }
+
+    // Demultiplex unknown samples
+    if(params.demux_unknown) {
+        // Demultiplex unknown samples
+        ch_demuxed_unknown = DEMULTIPLEX_UNKNOWN(ch_unknown_with_metadata)
+    }
 
     // Trim barcode and spacer
-    ch_trimmed_spacer = TRIM_BARCODE_AND_SPACER(ch_demuxed_flattened_filtered)
+    ch_trimmed_spacer = TRIM_BARCODE_AND_SPACER(ch_demuxed_flattened_split.known)
 
     // Process library
     ch_library_out = PROCESS_LIBRARY(ch_library)

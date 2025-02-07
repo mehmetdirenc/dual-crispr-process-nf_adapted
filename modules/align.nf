@@ -15,18 +15,16 @@ process ALIGN {
     R2 = fastq_files[1]
     """
     bowtie2 \
+        --seed 42 \
         --threads \$((${task.cpus})) \
         -x ${index}/index \
         --ignore-quals \
-        -L 21 \
-        -N 0 \
-        --very-sensitive \
-        --score-min L,-36,0 \
-        --np 25 \
-        --rdg 25,25 \
-        --rfg 25,25 \
+        -L 12 \
+        -N 1 \
+        --score-min L,-42,0 \
         --no-overlap \
         --no-contain \
+        -I 43 -X 43 \
         --fr \
         -1 ${R1} \
         -2 ${R2} 2> ${id}.log > ${id}.sam
