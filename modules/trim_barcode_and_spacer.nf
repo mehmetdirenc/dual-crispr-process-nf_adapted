@@ -20,7 +20,7 @@ process TRIM_BARCODE_AND_SPACER {
     mkdir -p output
 
     cutadapt \
-        -j ${task.cpus} \
+        -j 16 \
         -u \${length_barcode_spacer_R1} \
         -U \${length_barcode_spacer_R2} \
         -l ${params.guide_length} \
