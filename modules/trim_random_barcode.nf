@@ -1,6 +1,6 @@
 process TRIM_RANDOM_BARCODE {
     tag { lane }
-
+    cpus 2
     input:
     tuple val(lane), path(fastq_files)
 
@@ -23,7 +23,7 @@ process TRIM_RANDOM_BARCODE {
         -O \${length_barcode_spacer_R1} \
         -g \${barcode_spacer_R1} \
         --action=retain \
-        -j 16 \
+        -j 2 \
         -o output/${lane}_R1.fastq.gz \
         ${lane}_R1.fastq.gz 
    
@@ -31,7 +31,7 @@ process TRIM_RANDOM_BARCODE {
         -O \${length_barcode_spacer_R2} \
         -g \${barcode_spacer_R2} \
         --action=retain \
-        -j 16 \
+        -j 2 \
         -o output/${lane}_R2.fastq.gz \
         ${lane}_R2.fastq.gz
 
