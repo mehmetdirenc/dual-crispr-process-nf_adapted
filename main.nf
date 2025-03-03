@@ -166,6 +166,8 @@ workflow {
         .join(ch_trimmed_random)
     
     // Demultiplex
+    ch_trimmed_random_barcodes.view { "Input to DEMULTIPLEX: $it" }
+
     ch_demuxed = DEMULTIPLEX(ch_trimmed_random_barcodes)
 
     // Flatten demultiplexed files
