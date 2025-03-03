@@ -166,13 +166,13 @@ workflow {
         .join(ch_trimmed_random)
     
     // Demultiplex
-    ch_trimmed_random_barcodes.view { "Input to DEMULTIPLEX: $it" }
-    ch_trimmed_random_barcodes.println()
-    ch_trimmed_random.view { "Trimmed barcodes: $it" }
-    ch_processed_barcodes.view { "Processed barcodes: $it" }
-    ch_trimmed_random_barcodes.view { println "Input to DEMULTIPLEX: $it" }
-    ch_processed_barcodes.view { "Processed barcode: $it" }
-    ch_trimmed_random.view { "Trimmed random barcode: $it" }
+//     ch_trimmed_random_barcodes.view { "Input to DEMULTIPLEX: $it" }
+//     ch_trimmed_random_barcodes.println()
+//     ch_trimmed_random.view { "Trimmed barcodes: $it" }
+//     ch_processed_barcodes.view { "Processed barcodes: $it" }
+//     ch_trimmed_random_barcodes.view { println "Input to DEMULTIPLEX: $it" }
+//     ch_processed_barcodes.view { "Processed barcode: $it" }
+//     ch_trimmed_random.view { "Trimmed random barcode: $it" }
     ch_demuxed = DEMULTIPLEX(ch_trimmed_random_barcodes)
 
     // Flatten demultiplexed files
@@ -233,7 +233,8 @@ workflow {
     // collect all fastq files
     ch_fastq_files = ch_all_fastq
         .mix(ch_demuxed_flattened.map { lane, baseName, file -> tuple(baseName, file) })
-
+    ch_trimmed_spacer.view { "Trimmed FASTQ: $it" }
+    ch_all_fastq.view { "All FASTQ: $it" }
     // FastQC
     ch_fastqc = FASTQC(ch_fastq_files)
 
