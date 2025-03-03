@@ -15,6 +15,7 @@ def helpMessage() {
      nextflow run zuberlab/crispr-process-nf
 
      Options:
+        added
         --inputDir                          Input directory containing raw files. Either BAM or FASTQ files (R1 & R2).
                                             The FASTQ files must be named <lane>_R1.fastq.gz and <lane>_R2.fastq.gz.
                                             The BAM files must be named <lane>.bam.
