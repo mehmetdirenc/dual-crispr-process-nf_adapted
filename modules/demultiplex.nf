@@ -13,6 +13,7 @@ process DEMULTIPLEX {
     R1 = fastq_files[0]
     R2 = fastq_files[1]
     """
+    echo added_demultiplex ${params.barcode_demux_location}
     if [[ ${params.barcode_demux_location} == 'forward' ]]
     then
         cutadapt \

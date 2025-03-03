@@ -1,0 +1,22 @@
+lane	sample_name	barcode_R1	barcode_R2
+lane	pDNA_Vienna	AGCC
+lane	pDNA_amplified	GCAG
+lane	CD8_transduction ctrl	CTGA
+lane	CD4_transduction ctrl	TAGA
+lane	CD8_input ctrl	CGGA
+lane	CD4_input ctrl	ATCG
+lane	CD8_spleen_m4	ATAG
+lane	CD8_spleen_m1	ACTC
+lane	CD8_spleen_m2	GAAC
+lane	CD8_spleen_m3	TCGC
+lane	CD4_spleen_m1	TCCA
+lane	CD4_spleen_m2	TCGA
+lane	CD4_spleen_m3	AGCG
+lane	CD4_spleen_m4	TCGG
+lane	CD8_OVA tumor_m1	ATAC
+lane	CD8_OVA tumor_m3	TGTA
+lane	CD8_OVA tumor_m4	CGCC
+lane	CD8_spleen_m4	ATAG
+lane	CD4_OVA tumor_m4	GGCA
+lane	CD8_Ctrl tumor_m1	CCAA
+lane	CD4_Ctrl tumor_m1	TTGG

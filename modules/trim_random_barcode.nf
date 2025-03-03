@@ -11,6 +11,7 @@ process TRIM_RANDOM_BARCODE {
     R1 = fastq_files[0]
     R2 = fastq_files[1]
     """
+    echo added_random_barcode
     barcode=\$(printf "%${params.barcode_length}s" | tr ' ' "N")
     barcode_spacer_R1="\${barcode}${params.spacer_seq_R1}"    
     barcode_spacer_R2="\${barcode}${params.spacer_seq_R2}"
