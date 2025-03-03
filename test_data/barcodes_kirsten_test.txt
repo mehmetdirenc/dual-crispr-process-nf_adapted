@@ -1,0 +1,22 @@
+lane	sample_name	barcode_R1	barcode_R2
+crispr	pDNA_Vienna	AGCC	AGCC
+crispr	pDNA_amplified	GCAG	GCAG
+crispr	CD8_transduction ctrl	CTGA	CTGA
+crispr	CD4_transduction ctrl	TAGA	TAGA
+crispr	CD8_input ctrl	CGGA	CGGA
+crispr	CD4_input ctrl	ATCG	ATCG
+crispr	CD8_spleen_m4	ATAG	ATAG
+crispr	CD8_spleen_m1	ACTC	ACTC
+crispr	CD8_spleen_m2	GAAC	GAAC
+crispr	CD8_spleen_m3	TCGC	TCGC
+crispr	CD4_spleen_m1	TCCA	TCCA
+crispr	CD4_spleen_m2	TCGA	TCGA
+crispr	CD4_spleen_m3	AGCG	AGCG
+crispr	CD4_spleen_m4	TCGG	TCGG
+crispr	CD8_OVA tumor_m1	ATAC	ATAC
+crispr	CD8_OVA tumor_m3	TGTA	TGTA
+crispr	CD8_OVA tumor_m4	CGCC	CGCC
+crispr	CD8_spleen_m4	ATAG	ATAG
+crispr	CD4_OVA tumor_m4	GGCA	GGCA
+crispr	CD8_Ctrl tumor_m1	CCAA	CCAA
+crispr	CD4_Ctrl tumor_m1	TTGG	TTGG
