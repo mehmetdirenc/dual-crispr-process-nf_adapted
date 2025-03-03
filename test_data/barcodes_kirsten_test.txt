@@ -16,7 +16,6 @@ crispr	CD4_spleen_m4	TCGG	TCGG
 crispr	CD8_OVA_tumor_m1	ATAC	ATAC
 crispr	CD8_OVA_tumor_m3	TGTA	TGTA
 crispr	CD8_OVA_tumor_m4	CGCC	CGCC
-crispr	CD8_spleen_m4	ATAG	ATAG
 crispr	CD4_OVA_tumor_m4	GGCA	GGCA
 crispr	CD8_Ctrl_tumor_m1	CCAA	CCAA
 crispr	CD4_Ctrl_tumor_m1	TTGG	TTGG
