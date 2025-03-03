@@ -170,7 +170,7 @@ workflow {
     ch_trimmed_random_barcodes.println()
     ch_trimmed_random.view { "Trimmed barcodes: $it" }
     ch_processed_barcodes.view { "Processed barcodes: $it" }
-    ch_trimmed_random_barcodes.peek { println "Input to DEMULTIPLEX: $it" }
+    ch_trimmed_random_barcodes.view { println "Input to DEMULTIPLEX: $it" }
     ch_processed_barcodes.view { "Processed barcode: $it" }
     ch_trimmed_random.view { "Trimmed random barcode: $it" }
     ch_demuxed = DEMULTIPLEX(ch_trimmed_random_barcodes)
