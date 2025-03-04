@@ -233,8 +233,8 @@ workflow {
     // collect all fastq files
     ch_fastq_files = ch_all_fastq
         .mix(ch_demuxed_flattened.map { lane, baseName, file -> tuple(baseName, file) })
-    ch_trimmed_spacer.view { "Trimmed FASTQ: $it" }
-    ch_all_fastq.view { "All FASTQ: $it" }
+//     ch_trimmed_spacer.view { "Trimmed FASTQ: $it" }
+//     ch_all_fastq.view { "All FASTQ: $it" }
     // FastQC
     ch_fastqc = FASTQC(ch_fastq_files)
 
