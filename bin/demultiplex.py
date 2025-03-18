@@ -56,7 +56,7 @@ if __name__ == '__main__':
     # Path to the primers file
     primers_file = "/home/direnc/inputs/kirsten/crispr/primers.tsv"
     sample_to_primers_file = "/home/direnc/inputs/kirsten/crispr/sample_to_primer.tsv"
-    new_barcodes_file = "/home/direnc/PycharmProjects/dual-crispr-process-nf/test_data/barcodes_kirsten_test.txt"
+    new_barcodes_file = "/test_data/barcodes_kirsten_both_test.txt"
     # Read primers and create barcode mapping
     primers = read_primers(primers_file, sample_to_primers_file, new_barcodes_file)
     # sample_barcodes = extract_barcodes(primers)

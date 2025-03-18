@@ -17,7 +17,7 @@ process TRIM_RANDOM_BARCODE {
     barcode_spacer_R2="\${barcode}${params.spacer_seq_R2}"
     length_barcode_spacer_R1=\${#barcode_spacer_R1}
     length_barcode_spacer_R2=\${#barcode_spacer_R2}
-    trimmed_length_R1=\$((length_barcode_spacer_R1))
+    trimmed_length_R1=\$((length_barcode_spacer_R1 + 4))
     trimmed_length_R2=\$((length_barcode_spacer_R2 + 4))
 
     mkdir -p output
