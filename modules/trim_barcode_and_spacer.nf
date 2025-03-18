@@ -16,13 +16,14 @@ process TRIM_BARCODE_AND_SPACER {
     barcode_spacer_R2="\${barcode}${params.spacer_seq_R2}"
     length_barcode_spacer_R1=\${#barcode_spacer_R1}
     length_barcode_spacer_R2=\${#barcode_spacer_R2}
-
+    trimmed_length_R1=$((length_barcode_spacer_R1))
+    trimmed_length_R2=$((length_barcode_spacer_R2 + 4))
     mkdir -p output
 
     cutadapt \
         -j 16 \
-        -u \${length_barcode_spacer_R1} \
-        -U \${length_barcode_spacer_R2} \
+        -u \${trimmed_length_R1} \
+        -U \${trimmed_length_R2} \
         -l ${params.guide_length} \
         --minimum-length ${params.guide_length} \
         -o output/${id}_R1.fastq.gz \
