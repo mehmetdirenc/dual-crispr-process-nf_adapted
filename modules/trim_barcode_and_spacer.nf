@@ -17,7 +17,7 @@ process TRIM_BARCODE_AND_SPACER {
     length_barcode_spacer_R1=\${#barcode_spacer_R1}
     length_barcode_spacer_R2=\${#barcode_spacer_R2}
     trimmed_length_R1=\$((length_barcode_spacer_R1 + 4))
-    trimmed_length_R2=\$((length_barcode_spacer_R2 + 4))
+    trimmed_length_R2=\$((length_barcode_spacer_R2 + 8))
     mkdir -p output
 
     cutadapt \
